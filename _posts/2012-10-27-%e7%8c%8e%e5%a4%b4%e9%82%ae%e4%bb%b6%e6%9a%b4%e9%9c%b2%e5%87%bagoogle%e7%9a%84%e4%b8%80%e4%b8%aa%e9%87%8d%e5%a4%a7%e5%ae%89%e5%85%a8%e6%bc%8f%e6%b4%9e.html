@@ -1,0 +1,22 @@
+---
+layout: post
+title: "猎头邮件暴露出Google的一个重大安全漏洞"
+categories:
+- STUDYING
+- "网络安全"
+- "转载"
+tags:
+- GOOGLE安全性
+status: publish
+type: post
+published: true
+meta:
+  _edit_last: '1'
+author:
+  login: tinet
+  email: tinetkiller@gmail.com
+  display_name: Tinet
+  first_name: ''
+  last_name: ''
+---
+<p>《连线》<a href="http://www.wired.com/threatlevel/2012/10/dkim-vulnerability-widespread/all/">报导</a>，数学家Zachary Harris去年12月突然收到了Google猎头发来了招聘邮件，询问他是否对网站可靠性工程师这个职位感兴趣。Harris怀疑邮件可能是骗子发来的，然而检查邮件头信息发现它确实是来自google.com的合法邮件。他接着注意到Google使用了一种弱加密密钥（512位<a href="http://en.wikipedia.org/wiki/DKIM">DomainKeys Identified Mail</a>密钥，DKIM标准推荐使用1024位密钥）去签名发件人验证收件人，任何破解密钥的人都可以用它去冒充来自Google的发件人，包括创始人Sergey Brin和Larry Page。Harris对Google的工作不感兴趣，但他决定破解密钥，然后分别以Brin和Page的名义向彼此发送邮件，内容是他个人网站的网址。他本以为Brin和Page可能会回信询问，结果他们根本没回信。2天后，他注意到Google将加密密钥增加到2048位，而他的网站突然增加了大量来自Google IP的访问流量。</p>

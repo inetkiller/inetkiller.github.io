@@ -1,0 +1,79 @@
+---
+layout: post
+title: "在linux下搭建PHP开发环境记实(二)"
+categories:
+- LINUX
+- STUDYING
+tags:
+- Apache
+- LAMP
+- MYSQL5
+- php
+status: publish
+type: post
+published: true
+meta:
+  _edit_last: '1'
+  _oembed_bd364ad7add7de66adc155b992635819: "{{unknown}}"
+  _oembed_cf240ce4498ce6fe61be76d00a1a4030: "{{unknown}}"
+author:
+  login: tinet
+  email: tinetkiller@gmail.com
+  display_name: Tinet
+  first_name: ''
+  last_name: ''
+---
+<p>&nbsp;</p>
+<p>早就应该写这篇笔记的，却拖了这么久，今天写上也算解决了一桩心事，这算不算是强迫症呢，最近越来越发现自己有拖延症和强迫症的症状了。</p>
+<p>之前试过用源码安装的方式搭建整个开发环境，过程有点烦锁，需要自己解决包依赖的问题。但是我们知道ubuntu有他自己的软件仓库，像这么经典的东西，里面肯定会有的，所以这次尝试用apt-get install命令来搭建整个开发环境。</p>
+<p>-----------------------------------------------------------------------------</p>
+<p>链接：http://www.cnblogs.com/ubuntubox/archive/2011/04/07/2008258.html</p>
+<p>为了方便起见，我把内容贴过来了。经过实际测试，发现这种方法的确很方便，很快就可以搭建好整个平台，没有出现什么错误。</p>
+<p><strong>1.</strong><strong>安装 Apache</strong></p>
+<p>1.打开终端</p>
+<p>2. 输入以下命令</p>
+<p>sudo apt-get install apache2</p>
+<p>3. 如果没有sudo 权限，需要输入密码。<!--more--></p>
+<p><strong>2.</strong><strong>测试 Apache</strong></p>
+<p>为了确定安装是否成功，我们来测试一下。</p>
+<p>1. 打开浏览器，输入以下网址</p>
+<p>http://localhost/</p>
+<p>如果成功，你会看到以下内容 "It works!" , 祝贺你，第一步，你算是跨出去了。</p>
+<p><strong>3.</strong><strong>安装 PHP5</strong></p>
+<p>Step 1. 打开终端 (<em>ctrl+alt+T</em>).</p>
+<p>Step 2. 输入以下命令行:</p>
+<p>sudo apt-get install php5 libapache2-mod-php5</p>
+<p>Step 3.为了使PHP和Apache能一起工作，我们需要配置一下PHP并且测试一下。</p>
+<p>sudo /etc/init.d/apache2 restart</p>
+<p><strong>4.</strong><strong>测试 PHP</strong></p>
+<p>Step 1.我们先建一个PHP 测试文件(我们叫它phptest.php)，输入以下内容 ：</p>
+<p>sudo gedit /var/www/testphp.php</p>
+<p>Step 2.这时我们会打开一个文本编辑器，在里面输入以下内容.</p>
+<p>&lt;?php phpinfo(); ?&gt;</p>
+<p>Step 3.保存退出。</p>
+<p>Step 4. 现在打开浏览器，查看一下我们刚刚建立的内容。输入以下网址。</p>
+<p>http://localhost/testphp.php</p>
+<p>如果显示出PHP的信息内容页面，说明你又成功了一小步。</p>
+<p><strong>5.</strong><strong>安装 MySQL</strong></p>
+<p>下面我们来安装Mysql5 （这是最后一步，也是麻烦比较多的一步，安装的时候注意。）</p>
+<p>Step 1. 再一次地打开终端，输入以下内容。</p>
+<p>sudo apt-get install mysql-server</p>
+<p>Step 2.在安装的时候，如果要求你输入Mysql 密码，则输入密码。如果没有要求，则执行下一步。在终端中输入下面命令。</p>
+<p>mysql -u root</p>
+<p>后来，你还要输入以下内容；</p>
+<p>mysql&gt; SET PASSWORD FOR 'root'@'localhost' = PASSWORD('yourpassword');</p>
+<p>以上的'root'是你的Mysql 用户名，'yourpassword'是你的新密码。</p>
+<p>Step 3.下面我们将去处理更为棘手的phpmyadmin这里经常出现的问题就是明明安装了phpmyadmin但却在输入http://localhost/phpmyadmin的时候，没有出现管理界面，反而出现没有找到的页面。不急，我们先安装再了phpmyadmin然后再去解决。 输入以下命令:</p>
+<p>sudo apt-get install libapache2-mod-auth-mysql php5-mysql phpmyadmin</p>
+<p>这里的phpmyadmin是与我们之前装的php5 是相配合的，如果你装的PHP 和phpmyadmin不相配，它们不会工作。</p>
+<p>Step 4.现在我们去解决phpmyadmin“不工作”的问题，当我们安装了phpmyadmin 后，不要以为一切就绪了。其实我们还有一项工作要去完成，就是去配置phpmyadmin和apache2。同样的终端，输入：</p>
+<p>cp /etc/phpmyadmin/apache.conf /etc/apache2/sites-available/phpmyadmin</p>
+<p>这样我们就把phpmyadmin中的apache.conf（apache配置文件）复制到apache2/sites-available下的phpmyadmin文件下。</p>
+<p>Step 5.接着输入，进入sites-enabled文件夹下：</p>
+<p>cd /etc/apache2/sites-enabled/</p>
+<p>Step 6.进入之后，我们要建立一个通往配置文件的链接以便能利用它。输入：</p>
+<p>sudo ln -s ../sites-available/phpmyadmin</p>
+<p>Step 7.重启apache2</p>
+<p>sudo /etc/init.d/apache2 restart</p>
+<p>最后，打开http://localhost/phpmyadmin 去体验一下吧。</p>
+<p>&nbsp;</p>

@@ -1,0 +1,130 @@
+---
+layout: post
+title: "对ppp的认证方式进行回溯攻击笔记"
+categories:
+- LINUX
+- STUDYING
+- "网络安全"
+tags:
+- BUG
+- egre
+- gre
+- libnet
+- MS-CAHPV1
+- MS-CHAPV2
+- ppp
+- pylibnet
+- "回溯攻击"
+status: publish
+type: post
+published: true
+meta:
+  _edit_last: '1'
+  _aioseop_keywords: "回溯攻击, MS-CAHPV1, MS-CHAPV2, pylibnet, libnet, egre, gre, ppp,
+    BUG "
+author:
+  login: tinet
+  email: tinetkiller@gmail.com
+  display_name: Tinet
+  first_name: ''
+  last_name: ''
+---
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">我电脑上相关软件包的版本分别是：</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">pylibnet:3.0-beta</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">libnet:1.1.2.1</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">通过多次对</span><span style="font-family: 文泉驿微米黑;">ppp</span><span style="font-family: 文泉驿微米黑;">认证的抓包分析后，暂时得出了以下的结论：</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">要想成功欺骗到服务器，在伪造包的时候需要几个关键域，第一个就是</span><span style="font-family: 文泉驿微米黑;">ip</span><span style="font-family: 文泉驿微米黑;">头部中的</span><span style="font-family: 文泉驿微米黑;">Identification</span><span style="font-family: 文泉驿微米黑;">，在链中控制协议进行配置的过程中客户端每发一个包，此域就会加</span><span style="font-family: 文泉驿微米黑;">1</span><span style="font-family: 文泉驿微米黑;">。第二个就是客户端和服务器端的</span><span style="font-family: 文泉驿微米黑;">ip</span><span style="font-family: 文泉驿微米黑;">地址。</span></p>
+<p align="LEFT"><!--more--></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">第三个是</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">中标识一个客户端会话的</span><span style="font-family: 文泉驿微米黑;">callid</span><span style="font-family: 文泉驿微米黑;">值，这个值在整个会话过程中会一直保持，这样服务器在同时有多个客户端的时候就可以区分出来。这里有一点问题，通过抓包可以发现服务器的</span><span style="font-family: 文泉驿微米黑;">callid</span><span style="font-family: 文泉驿微米黑;">值经常会是</span><span style="font-family: 文泉驿微米黑;">0</span><span style="font-family: 文泉驿微米黑;">，但是有时候又不是。而目前在攻击程序中恰好是通过看抓到的</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">包中</span><span style="font-family: 文泉驿微米黑;">callid</span><span style="font-family: 文泉驿微米黑;">是不是</span><span style="font-family: 文泉驿微米黑;">0</span><span style="font-family: 文泉驿微米黑;">来区分客户端和服务器端的，显然这里是需要改进的。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">第四个是</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">中的</span><span style="font-family: 文泉驿微米黑;">Sequence number</span><span style="font-family: 文泉驿微米黑;">，在整个连接过程中，客户端每发送一个包这个值就会增加</span><span style="font-family: 文泉驿微米黑;">1</span><span style="font-family: 文泉驿微米黑;">。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">以上就是需要抓包提取出的信息。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">接下来就是构造一个</span><span style="font-family: 文泉驿微米黑;">LCP NAK</span><span style="font-family: 文泉驿微米黑;">的包发送给服务器了。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">针对我们要把认证协议从</span><span style="font-family: 文泉驿微米黑;">MS</span><span style="font-family: 文泉驿微米黑;">－</span><span style="font-family: 文泉驿微米黑;">CHAPV2</span><span style="font-family: 文泉驿微米黑;">回溯到</span><span style="font-family: 文泉驿微米黑;">MS</span><span style="font-family: 文泉驿微米黑;">－</span><span style="font-family: 文泉驿微米黑;">CHAP</span><span style="font-family: 文泉驿微米黑;">，构造出来的</span><span style="font-family: 文泉驿微米黑;">ppp</span><span style="font-family: 文泉驿微米黑;">包应该如下图所示：</span></p>
+<p align="LEFT"><a href="http://www.asleaper.com/wp-content/uploads/2012/10/packet.jpg"><img class="alignleft size-full wp-image-153" title="packet" src="http://www.asleaper.com/wp-content/uploads/2012/10/packet.jpg" alt="" width="728" height="239" /></a></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">根据多次抓包发现这些值似乎都是固定的，所以构造的时候直接给定值就行了。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">我们采用</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">中 的函数来构造包（它也是通过</span><span style="font-family: 文泉驿微米黑;">libnet</span><span style="font-family: 文泉驿微米黑;">来构造包的），</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">只提供了构造</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">包的函数，并没有提供</span><span style="font-family: 文泉驿微米黑;">ppp</span><span style="font-family: 文泉驿微米黑;">和</span><span style="font-family: 文泉驿微米黑;">lcp</span><span style="font-family: 文泉驿微米黑;">包的构造函数。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">这里很有必要记录一下在构造</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">包的时候遇到的问题。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">实际上微软用的</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">协议并不是原生的，而是经过它自己改动过的，改动后的协议格式如图所示：</span></p>
+<p align="LEFT"><a href="http://www.asleaper.com/wp-content/uploads/2012/10/mgre.png"><img class="alignleft size-full wp-image-156" title="mgre" src="http://www.asleaper.com/wp-content/uploads/2012/10/mgre.png" alt="" width="584" height="192" /></a></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">因此不应该调用</span><span style="font-family: 文泉驿微米黑;">buile_gre</span><span style="font-family: 文泉驿微米黑;">这个函数，经过查阅后发现应该调用的是</span><span style="font-family: 文泉驿微米黑;">build_egre</span><span style="font-family: 文泉驿微米黑;">这个函数，也即是构造加强版的</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">通过查看</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">的文档可以看到</span><span style="font-family: 文泉驿微米黑;">build_egre</span><span style="font-family: 文泉驿微米黑;">函数调用方法：</span></p>
+<p align="LEFT"><a href="http://www.asleaper.com/wp-content/uploads/2012/10/pydoc_libnet.png"><img class="alignleft size-full wp-image-157" title="pydoc_libnet" src="http://www.asleaper.com/wp-content/uploads/2012/10/pydoc_libnet.png" alt="" width="1161" height="372" /></a></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">有趣的事情就在这里。通过查看</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">的源码可以看到这个函数的实现，里面有一句很关键的代码：</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">ptag = libnet_build_egre (fv, type, sum, offset, key, seq, len, payload, payload_s, self-&gt;l, ptag);</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">可以看出它是通过调用</span><span style="font-family: 文泉驿微米黑;">libnet</span><span style="font-family: 文泉驿微米黑;">里面的函数来进行真正的构造，</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">只不过做了一些类似包装的工作。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">沿着这条踪迹找到</span><span style="font-family: 文泉驿微米黑;">libnet_build_egre()</span><span style="font-family: 文泉驿微米黑;">函数，以下是它的定义</span><span style="font-family: 文泉驿微米黑;">:</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">libnet_ptag_t </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> libnet_build_egre(u_int16_t fv, u_int16_t type, u_int16_t sum, </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int16_t offset, u_int32_t key, u_int32_t seq, u_int16_t len, </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int8_t *payload, u_int32_t payload_s, libnet_t *l, libnet_ptag_t ptag) </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> { </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> return (libnet_build_gre(fv, type, sum, offset, key, seq, len, </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> payload, payload_s, l, ptag)); </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> }</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">这个函数似乎并没有做任何的工作，只是把收到的参数又给了 </span><span style="font-family: 文泉驿微米黑;">libnet_build_gre</span><span style="font-family: 文泉驿微米黑;">，继续看一下 </span><span style="font-family: 文泉驿微米黑;">libnet_build_gre</span><span style="font-family: 文泉驿微米黑;">的定义。里面有很多类似这样的判断：</span></p>
+<p align="LEFT"><a href="http://www.asleaper.com/wp-content/uploads/2012/10/if.png"><img class="alignleft size-full wp-image-159" title="if" src="http://www.asleaper.com/wp-content/uploads/2012/10/if.png" alt="" width="641" height="122" /></a></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">注释</span><span style="font-family: 文泉驿微米黑;">v0</span><span style="font-family: 文泉驿微米黑;">一栏的意思是如果</span><span style="font-family: 文泉驿微米黑;">flag</span><span style="font-family: 文泉驿微米黑;">中</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">的版本是</span><span style="font-family: 文泉驿微米黑;">0</span><span style="font-family: 文泉驿微米黑;">且</span><span style="font-family: 文泉驿微米黑;">sum</span><span style="font-family: 文泉驿微米黑;">位被置为</span><span style="font-family: 文泉驿微米黑;">1</span><span style="font-family: 文泉驿微米黑;">或者</span><span style="font-family: 文泉驿微米黑;">routing</span><span style="font-family: 文泉驿微米黑;">位被置为</span><span style="font-family: 文泉驿微米黑;">1</span><span style="font-family: 文泉驿微米黑;">则执行。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">注释</span><span style="font-family: 文泉驿微米黑;">v1</span><span style="font-family: 文泉驿微米黑;">一栏的意思是如果</span><span style="font-family: 文泉驿微米黑;">flag</span><span style="font-family: 文泉驿微米黑;">中</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">的版本是</span><span style="font-family: 文泉驿微米黑;">1</span><span style="font-family: 文泉驿微米黑;">则执行。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">在上面这段代码之前已经构造完成了</span><span style="font-family: 文泉驿微米黑;">fv</span><span style="font-family: 文泉驿微米黑;">和</span><span style="font-family: 文泉驿微米黑;">type</span><span style="font-family: 文泉驿微米黑;">这两个域。根据微软给出的</span><span style="font-family: 文泉驿微米黑;">GRE</span><span style="font-family: 文泉驿微米黑;">包的格式可以知道实际上这里是把</span><span style="font-family: 文泉驿微米黑;">sum</span><span style="font-family: 文泉驿微米黑;">写进了</span><span style="font-family: 文泉驿微米黑;">payload length</span><span style="font-family: 文泉驿微米黑;">这个地方，以此类推，</span><span style="font-family: 文泉驿微米黑;">offset</span><span style="font-family: 文泉驿微米黑;">被当成了</span><span style="font-family: 文泉驿微米黑;">call id</span><span style="font-family: 文泉驿微米黑;">看待，</span><span style="font-family: 文泉驿微米黑;">key</span><span style="font-family: 文泉驿微米黑;">被当</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">成</span><span style="font-family: 文泉驿微米黑;">seqnum,seqnum</span><span style="font-family: 文泉驿微米黑;">当做</span><span style="font-family: 文泉驿微米黑;">ack</span><span style="font-family: 文泉驿微米黑;">看待。但</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">的文档却没有说明这些问题，带来了很多麻烦。</span><span style="font-family: 文泉驿微米黑;">个人认为不仅</span><span style="font-family: 文泉驿微米黑;">pylibnet</span><span style="font-family: 文泉驿微米黑;">文档有错，</span><span style="font-family: 文泉驿微米黑;">libnet</span><span style="font-family: 文泉驿微米黑;">也有过错。可以找到</span><span style="font-family: 文泉驿微米黑;">libnet</span><span style="font-family: 文泉驿微米黑;">对</span><span style="font-family: 文泉驿微米黑;">gre</span><span style="font-family: 文泉驿微米黑;">的格式是这样定义的：</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">struct libnet_gre_hdr </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">{ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">u_int16_t flags_ver; </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_CSUM 0x8000 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_ROUTING 0x4000 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_KEY 0x2000 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_SEQ 0x1000 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_STRICT 0x0800 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_REC 0x0700 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_ACK 0x0080 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_FLAGS_MASK 0x00F8 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VERSION_MASK 0x0007 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VERSION_0 0x0000 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VERSION_1 0x0001 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">u_int16_t type; </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_SNA 0x0004 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_OSI_NETWORK_LAYER 0x00FE </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_PUP 0x0200 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_XNS 0x0600 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_IP 0x0800 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_CHAOS 0x0804 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_RFC_826_ARP 0x0806 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_FRAME_RELAY_ARP 0x0808 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VINES 0x0BAD </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VINES_ECHO 0x0BAE </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_VINES_LOOPBACK 0x0BAF </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_DECNET 0x6003 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_TRANSPARENT_ETHERNET_BRIDGING 0x6558 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_RAW_FRAME_RELAY 0x6559 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_APOLLO_DOMAIN 0x8019 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_ETHERTALK 0x809B </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_NOVELL_IPX 0x8137 </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_RFC_1144_TCP_IP_COMPRESSION 0x876B </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_IP_AUTONOMOUS_SYSTEMS 0x876C </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_SECURE_DATA 0x876D </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define GRE_PPP 0x880b /* taken from RFC 2637 */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">union { </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> struct { </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int16_t sum; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int16_t offset; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int32_t key; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int32_t seq; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> } _gre; </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> struct { </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int16_t payload_s; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int16_t callID; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int32_t seq; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> u_int32_t ack; /* optional */ </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;"> } _egre; </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">}_data; </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define gre_sum _data._gre.sum </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define gre_offset _data._gre.offset </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define gre_key _data._gre.key </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define gre_seq _data._gre.seq </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define egre_payload_s _data._egre.payload_s </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define egre_callID _data._egre.callID </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define egre_seq _data._egre.seq </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">#define egre_ack _data._egre.ack </span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">};</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">可看到针对</span><span style="font-family: 文泉驿微米黑;">egre</span><span style="font-family: 文泉驿微米黑;">实际上它定义了一个直观的数据结构，但在</span><span style="font-family: 文泉驿微米黑;">libnet_build_egre</span><span style="font-family: 文泉驿微米黑;">中并没有使用。</span><span style="font-family: 文泉驿微米黑;">libnet_build_gre</span><span style="font-family: 文泉驿微米黑;">中也只涉及到了对</span><span style="font-family: 文泉驿微米黑;">_gre</span><span style="font-family: 文泉驿微米黑;">（</span><span style="font-family: 文泉驿微米黑;">V0</span><span style="font-family: 文泉驿微米黑;">）进行赋值，没有用到</span><span style="font-family: 文泉驿微米黑;">_egre(V1)</span><span style="font-family: 文泉驿微米黑;">。目前看来调用这个函数就相当于调用</span><span style="font-family: 文泉驿微米黑;">build_gre</span><span style="font-family: 文泉驿微米黑;">这个函数，</span><span style="font-family: 文泉驿微米黑;">build_egre</span><span style="font-family: 文泉驿微米黑;">没有任何作用。应该说</span><span style="font-family: 文泉驿微米黑;">libnet</span><span style="font-family: 文泉驿微米黑;">在</span><span style="font-family: 文泉驿微米黑;">libnet_build_egre</span><span style="font-family: 文泉驿微米黑;">这个函数中应该做一个改进的。</span></p>
+<p align="LEFT"><span style="font-family: 文泉驿微米黑;">再看攻击的结果，根据测试，只要伪造的包比真正客户端回应的包早到达服务器，攻击一般都是成功的。</span><span style="font-family: 文泉驿微米黑;">这应该也可以算做它的一个漏洞，对于服务器的反悔，客户端并不做检查。</span></p>

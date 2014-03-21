@@ -1,0 +1,111 @@
+---
+layout: post
+title: "温故而知新之虚拟存储器"
+categories:
+- LINUX
+- STUDYING
+tags:
+- "虚拟存储器"
+status: publish
+type: post
+published: true
+meta:
+  _edit_last: '1'
+author:
+  login: tinet
+  email: tinetkiller@gmail.com
+  display_name: Tinet
+  first_name: ''
+  last_name: ''
+---
+<p>&nbsp;</p>
+<p>去年也看过这部分内容，有些问题不是很明白，如今再看一遍，收获很多，做个小小的总结吧。</p>
+<p>计算机系统的主存被组织成一个由M个连续的字节大小的单元组成的数组。每字节都有一个唯一的物理地址，第一个字节的地址为0，第二个为1，以此类推。这种编址方式称为物理编址。早期的处理器使用物理寻址，然而现在的处理器使用的都是一种虚拟寻址技术，这种技术非常灵活，带来了很多方便，后面可以看到。</p>
+<p>使用虚拟寻址时，CPU通过生成一个虚拟地址来访问主存，这个地址被送到存储器之前被转换成适当的物理地址。转换过程需要CPU硬件和操作系统软件之间的紧密合作（CPU芯片上叫做MMU的专用硬件，利用存放在主存中的查询表来动态翻译虚拟地址，该表的内容是由操作系统管理的）。下面就详细的来看一下这个过程。<br />
+<!--more--><br />
+虚拟寻址涉及到一个概念--虚拟存储器。它是一个存放在磁盘上的N个连续的字节大小的单元组成的数组。同样，每个字节都有唯一的虚拟地址。VM系统将虚拟存储器分割为称为虚拟页的大小固定的块。类似的物理存储器被分割为物理页，页大小和虚拟存储器的页大小一样。两者之间关系可以简单的理解为物理存储器是虚拟存储器的一个缓存，即在主存中缓存虚拟页。</p>
+<p>页表的概念：就是一个页表条目（PTE）的数组，可以简单把PTE看作是由一个有效位和一个n位地址字段组成的数据结构（实际多了一些标志位）。如果设置了有效位，那么地址字段就表示DRAM中相应的物理页的起始位置，这个物理页中缓存了该虚拟页（物理页和虚拟页之间的映射不是固定的）。如果没有设置有效位，那么一个空地址表示这个虚拟页还未被分配，否则，这个地址就指向该虚拟页在磁盘上的起始位置。</p>
+<p>以linux 32位系统为样本来学习虚拟存储器的更多细节。</p>
+<p>在进一步说明的前仍然需要了解一些基本的常识性知识，比如操作系统为每个进程提供了一个独立的页表，因而也就是一个独立的虚拟地址空间，但实际上进程不能使用整个虚拟地址空间，有一部分地址空间（一般高地址3-4GB段）是留给操作系统内核使用的，而每个进程共享内核代码和数据，内核还包括与当前进程相关的数据结构（页表，Task，和mm结构，内核栈）。进程能使用的只是0-3GB虚拟地址空间。一个linux进程的虚拟存储器如下图所示。</p>
+<p align="center"><a href="http://www.asleaper.com/wp-content/uploads/2013/05/1353480359_8969.jpg"><img class="size-full wp-image-325 alignnone" title="1353480359_8969" src="http://www.asleaper.com/wp-content/uploads/2013/05/1353480359_8969.jpg" alt="linux进程的虚拟存储器" width="465" height="557" /></a></p>
+<p align="center">图表 1一个linux进程的虚拟存储器</p>
+<p align="left">              <strong>假设我们现在有一个可执行目标文件，在终端中执行这个程序，整个过程是怎样的呢？（整篇文章就是在试图解决这个问题！）</strong><strong></strong></p>
+<p align="left">       我们知道终端本身就是一个进程，终端在执行的时候会生成一个子进程，它是终端（父进程）的一个复制品。子进程通过execve系统调用启动加载器。加载器删除子进程现有的虚拟存储器段，并创建一组新的代码，数据，堆和栈段。新的堆和栈段被初始化为零。通过将虚拟地址空间中的页映射到可执行文件的页大小的片（一份可执行文件的拷贝?），新的代码和数据段被初始化为可执行文件的内容。最后加载器跳到_start地址。除了一些头部信息，在加载过程中没有任何从磁盘到存储器的数据拷贝，直到CPU引用一个被映射的虚拟页才会进行拷贝。</p>
+<p align="left">       先来看一下生成一个子进程背后的动作。当fork函数被当前进程调用时，内核为新进程创建各种数据结构，并分配给它一个唯一的PID。为了给这个新进程创建虚拟存储器，它创建了当前进程的mm_strutc、区域结构和页表的原样拷贝（知道了这个，就很容易理解为什么fork函数要返回两次了，我们可以根据返回的值判断当前是在父进程还是子进程中）。它将两个进程中的每个页面条目（相应私有区域的PTE)都标记为只读，并将两个进程中的每个区域结构都标记为私有的写时拷贝。当fork在新进程中返回时，新进程现在的虚拟存储器刚好和调用fork时存在的虚拟存储器相同。当这两个进程中的任何一个后来进行写操作时，写时拷贝机制就会创建新的页面，因此，也就为每个进程保持了私有地址空间的抽象概念。</p>
+<p align="left">       很有必要解释一下写时拷贝技术。应该说写时拷贝技术是为私有对象这一概念服务的。前面我们知道，一个对象可以被映射到虚拟存储器中，这里要说的是，这个对象可以作为共享对象来映射，也可以作为私有对象来映射。什么是共享对象映射？如果一个进程将一个共享对象映射到它的虚拟地址空间的一个区域内，那么这个进程对这个区域的任何写操作，对于那些也把这个共享对象映射到它们虚拟存储器的其他进程而言也是可见的。而且，这些变化也会反映在磁盘上的原始对象中。什么又是私有对象映射呢？对于一个映射到私有对象区域所做的改变，对于其他进程来说是不可见的，并且进程对这个区域所做的任何写操作都不会反映在磁盘上的对象中。现在可以解释这个写时拷贝技术了。对于每个映射私有对象的进程，相应私有区域的PTE被标记为只读，并且区域结构被标记为私有的写时拷贝。只要没有进程试图写它自己的私有区域，它们就可以继续共享物理存储器中对象的一个单独拷贝。然而，只要当一个进程试图写私有区域内的某个页面时，那么这个写操作就触发一个保护故障。当保护故障处理程序注意到保护异常是由于进程试图写私有的写时拷贝区域中的一个页面而引起的，它就会在物理存储器中创建这个页面的一个新拷贝，更新PTE指向这个新的拷贝（虚拟存储器端的操作是怎样的？回答：PTE和虚拟存储器中的某个页面相对应，系统在恰当的时候会把物理存储器中页面的改变反映到进程的虚拟存储器中），然后恢复这个页面的可写权限。</p>
+<p align="left">   一般在生成一个子进程后会调用execve函数来加载子进程需要执行的程序，这背后的过程又是怎样的呢？加载并运行子进程执行的程序需要以下步骤:</p>
+<p align="left">       1、删除已存在的用户区域。删除当前进程虚拟地址的用户部分中的已存在的区域结构。</p>
+<p align="left">       2、映射私有区域。为新程序的文本（代码）、数据、bss和栈区域创建新的区域结构。所有这些新的区域都是私有的、写时拷贝的。文本和数据区域被映射为可执行文件中的文本和数据区。bss区域是请求二进制零的（以二进制零进行初始化）。栈和堆区也是请求二进制零的，初始长度为零。</p>
+<p align="left">       3、映射共享区域。如果可执行程序与共享对象链接，比如标准C库libc.so，那么这些对象都是动态链接到这个程序的，然后再映射到用户虚拟地址空间中的共享区域内。</p>
+<p align="left">       4、设置程序计数器（PC）。execve做的最后一件事就是设置当前进程上下文中的程序计数器，使其指向文本区域的入口点。</p>
+<p align="left">       系统是如何确定虚拟地址空间各个段的地址的呢？这就涉及到linux的ELF可执行文件，ELF有一个头，这个头里面包括了很多信息，使得可执行文件连续的片很容易的被映射到虚拟地址空间中。一个测试程序的ELF头部信息的一部分如下图所示：</p>
+<p align="center"><a href="http://www.asleaper.com/wp-content/uploads/2013/05/image004.jpg"><img class="alignnone size-full wp-image-326" title="image004" src="http://www.asleaper.com/wp-content/uploads/2013/05/image004.jpg" alt="ELF头" width="554" height="447" /></a></p>
+<p align="center">图表 2 ELF头部信息的一部分</p>
+<p>       其中第三列（VMA）就是虚拟存储器的地址，从这些信息中系统可以很容易的知道，该把这个文件映射到虚拟存储器中的哪些位置（内核虚拟存储器对用户代码是不可见的），以及其它更多的信息。</p>
+<p>再来看一下PTE表的建立。老版本的linux系统使用的是二级页表，二级页表的查找过程如下图所示：</p>
+<p align="center"><a href="http://www.asleaper.com/wp-content/uploads/2013/05/image006.jpg"><img class="alignnone size-full wp-image-327" title="image006" src="http://www.asleaper.com/wp-content/uploads/2013/05/image006.jpg" alt="" width="554" height="554" /></a></p>
+<p align="center">图表 3 linux二级页表转换成物理地址</p>
+<p>       靠硬件（MMU)完成转换的时间是非常快的，所以这样设计，性能上不用担心。</p>
+<p>&nbsp;</p>
+<p>虚拟存储器是一个复杂的系统，这么短的篇幅不可能了解透彻，还得自己静下心来，仔细思考，带着问题去看书，才能更深入的理解她。</p>
+<p>&nbsp;</p>
+<p>附录：</p>
+<p>linux系统在task_struct结构体中有mm_struct结构体：描述一个进程的虚拟地址空间</p>
+<p>struct mm_struct {</p>
+<p>struct vm_area_struct * mmap;</p>
+<p>rb_root_t mm_rb;</p>
+<p>struct vm_area_struct * mmap_cache;</p>
+<p>pgd_t * pgd;   //第一级页表的基址</p>
+<p>atomic_t mm_users;</p>
+<p>atomic_t mm_count;</p>
+<p>int map_count;</p>
+<p>struct rw_semaphore mmap_sem;</p>
+<p>spinlock_t page_table_lock;        /* 保护任务页表和 mm-&gt;rss */</p>
+<p>struct list_head mmlist;            /*所有活动（active）mm的链表 */</p>
+<p>unsigned long start_code, end_code, start_data, end_data;</p>
+<p>unsigned long start_brk, brk, start_stack;</p>
+<p>unsigned long arg_start, arg_end, env_start, env_end;</p>
+<p>unsigned long rss, total_vm, locked_vm;</p>
+<p>unsigned long def_flags;</p>
+<p>unsigned long cpu_vm_mask;</p>
+<p>unsigned long swap_address;</p>
+<p>&nbsp;</p>
+<p>unsigned dumpable:1;</p>
+<p>&nbsp;</p>
+<p>/* Architecture-specific MM context */</p>
+<p>mm_context_t context;</p>
+<p>};</p>
+<p>&nbsp;</p>
+<p>&nbsp;</p>
+<p>vm_area_struct：描述进程的一个虚拟地址区域</p>
+<p>struct vm_area_struct</p>
+<p>struct mm_struct * vm_mm;       /* 虚拟区间所在的地址空间*/</p>
+<p>unsigned long vm_start;         /* 在vm_mm中的起始地址*/</p>
+<p>unsigned long vm_end;           /*在vm_mm中的结束地址 */</p>
+<p>&nbsp;</p>
+<p>/* linked list of VM areas per task, sorted by address */</p>
+<p>struct vm_area_struct *vm_next;</p>
+<p>&nbsp;</p>
+<p>pgprot_t vm_page_prot;          /* 对这个虚拟区间的存取权限 */</p>
+<p>unsigned long vm_flags;         /* 虚拟区间的标志. */</p>
+<p>&nbsp;</p>
+<p>rb_node_t vm_rb;</p>
+<p>&nbsp;</p>
+<p>/*</p>
+<p>* For areas with an address space and backing store,</p>
+<p>* one of the address_space-&gt;i_mmap{,shared} lists,</p>
+<p>* for shm areas, the list of attaches, otherwise unused.</p>
+<p>*/</p>
+<p>struct vm_area_struct *vm_next_share;</p>
+<p>struct vm_area_struct **vm_pprev_share;</p>
+<p>&nbsp;</p>
+<p>/*对这个区间进行操作的函数 */</p>
+<p>struct vm_operations_struct * vm_ops;</p>
+<p>&nbsp;</p>
+<p>/* Information about our backing store: */</p>
+<p>unsigned long vm_pgoff;         /* Offset (within vm_file) in PAGE_SIZE</p>
+<p>units, *not* PAGE_CACHE_SIZE */</p>
+<p>struct file * vm_file;          /* File we map to (can be NULL). */</p>
+<p>unsigned long vm_raend;         /* XXX: put full readahead info here. */</p>
+<p>void * vm_private_data;         /* was vm_pte (shared mem) */</p>
+<p>};</p>

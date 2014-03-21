@@ -1,3 +1,4 @@
-baseurl: /inetkiller.github.io
+#baseurl: /inetkiller.github.io
 permalink: pretty
 pygments: true
+favicon: /favicon.ico

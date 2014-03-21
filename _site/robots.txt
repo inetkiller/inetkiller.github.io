@@ -1,3 +1,0 @@
-Sitemap: http://inetkiller.github.io/sitemap.xml
-User-agent: *
-Allow: /

@@ -8,20 +8,8 @@ title: 观海听涛
 	<h1>Blog Posts</h1>
 	<ul class="posts">
 		{% for post in site.posts %}
-		<li><span>{{ post.date | date_to_string }}</span> <span class="seperator">&raquo;</span> <a href="{{ post.url }}#disqus_thread">{{ post.title }}</a></li>
+		<li><span>{{ post.date | date_to_string }}</span> <span class="seperator">&raquo;</span> <a href="{{ post.url }}">{{ post.title }}</a></li>
 		{% endfor %}
 	</ul>
 </div>
 
-<script type="text/javascript"> 
-/* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
-var disqus_shortname = 'inetkillergithubio'; // required: replace example with your forum shortname
-
-/* * * DON'T EDIT BELOW THIS LINE * * */
-(function () {
-var s = document.createElement('script'); s.async = true;
-s.type = 'text/javascript';
-s.src = 'http://' + disqus_shortname + '.disqus.com/count.js';
-(document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s);
-}());
-</script>

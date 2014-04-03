@@ -2,3 +2,4 @@
 permalink: pretty
 pygments: true
 favicon: /favicon.ico
+markdown: kramdown

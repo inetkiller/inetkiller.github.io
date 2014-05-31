@@ -1,0 +1,6 @@
+#baseurl: /inetkiller.github.io
+permalink: pretty
+pygments: true
+favicon: /favicon.ico
+markdown: kramdown
+#markdown: maruku

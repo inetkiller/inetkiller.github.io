@@ -2,4 +2,5 @@
 permalink: pretty
 pygments: true
 favicon: /favicon.ico
-markdown: kramdown
+#markdown: kramdown
+markdown: maruku

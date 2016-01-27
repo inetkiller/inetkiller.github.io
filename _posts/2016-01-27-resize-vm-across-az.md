@@ -4,10 +4,12 @@ layout: post
 title: 实例resize跨可用域问题
 
 ---
-问题：
+**问题：**
+
 在实际使用openstack的过程中发现实例resize操作的时候存在跨可用域的问题。
 
-问题分析：
+**问题分析：**
+
 resize的时候找符合要求的计算结点这个工作是由nova-schduler来完成的。scheduler会对所有的计算结点做一遍filter，然后对通过filter的主机做weight。问题就出在filter这里，默认的filter是包括AvailabilityZoneFilter的，也就是说，如果计算结点不满足实例所属的az的话，那么它不会通过filter，实例当然也就不会resize到这台计算结点上，表现出来的功能就是az之间的schduler是隔离的。
 AvailabilityZoneFilter的源码：
 {% highlight python %}
@@ -112,10 +114,11 @@ def get_instance_availability_zone(context, instance):
         cache.set(cache_key, az, AZ_CACHE_SECONDS)
     return az
 {% endhighlight %}
-这段代码的逻辑是先得到实例在哪台计算结点上，然后再取得这个计算结点属于哪个可用域，然后做为实例的可用域信息返回给horizon。
+这段代码的逻辑是先得到实例在哪台计算结点上，然后再取得这个计算结点属于哪个可用域，然后做为实例的可用域信息返回给dashboard。
 
 原来是这个扩展api返回的数据欺骗了我的双眼。。。
 
 
-解决方法：
+**解决方法：**
+
 以后用命令行创建实例的时候一定要明确指定可用域信息。对于已经存在的实例，可以去instances表中直接改实例的可用域信息（该方法未经过测试）。

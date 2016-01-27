@@ -60,29 +60,35 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
 再详细分析一下上述代码。
 下面的代码是取到实例所属的az(可用域),如果实例的az为空，即不属于任何az，那么直接返回真（所有的计算结点都可以通过这个filter）:
 {% highlight python %}
+
 spec = filter_properties.get('request_spec', {})
 props = spec.get('instance_properties', {})
 availability_zone = props.get('availability_zone')
 
 if not availability_zone:
             return True
+
 {% endhighlight %}
 
 下面这部分是取到计算结点的az:
 {% highlight python %}
+
 context = filter_properties['context']
 metadata = db.aggregate_metadata_get_by_host(
         context, host_state.host, key='availability_zone')
+
 {% endhighlight %}
 
 下面这部分是比较实例的az和当前被筛选的计算结点的az是否一致，一致返回真，否则返回假（注意，有些计算结点属于默认的nova可用域）。
 {% highlight python %}
+
         if 'availability_zone' in metadata:
             hosts_passes = availability_zone in metadata['availability_zone']
             host_az = metadata['availability_zone']
         else:
             hosts_passes = availability_zone == CONF.default_availability_zone
             host_az = CONF.default_availability_zone
+
 {% endhighlight %}
 
 经过分析上面的代码，以及对数据库的检查，出现问题的原因很明显是因为实例的az信息为空，导致了所有计算结点都通过了这个filter，所以resize的时候存在跨可用域的现象。
